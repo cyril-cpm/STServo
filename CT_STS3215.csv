@@ -1,0 +1,17 @@
+RAM Adresse (Hex),Taille,Accès,Nom,Description
+0x28 (40),1 octet,R/W,Torque Enable,"1 : Moteur bloqué, 0 : Roue libre."
+0x2A (42),2 octets,R/W,Target Position,Position cible (0 à 4095).
+0x2C (44),2 octets,R/W,Running Time,Temps pour atteindre la cible (ms).
+0x2E (46),2 octets,R/W,Running Speed,Vitesse de déplacement (step/s).
+0x30 (48),1 octet,R/W,Acceleration,Accélération du mouvement.
+0x38 (56),2 octets,R,Present Position,Position actuelle réelle.
+0x3A (58),2 octets,R,Present Speed,Vitesse actuelle réelle.
+0x3C (60),2 octets,R,Present Load,Couple/Charge actuelle (0-2047).
+0x3E (62),1 octet,R,Present Voltage,Tension d'entrée (Valeur/10).
+0x3F (63),1 octet,R,Present Temp,Température en °C.
+
+EEPROM Adresse (Hex),Taille,Accès,Nom,Description
+0x05 (5),1 octet,R/W,ID,Identifiant du servo (1 à 253).
+0x06 (6),1 octet,R/W,Baud Rate,Vitesse série (1000000 par défaut).
+0x09 (9),2 octets,R/W,Min Angle Limit,Limite basse de rotation (0 par défaut).
+0x0B (11),2 octets,R/W,Max Angle Limit,Limite haute (4095 par défaut).
