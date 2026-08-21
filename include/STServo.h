@@ -1,5 +1,4 @@
-#ifndef STSERVI_H
-#define STSERVO_H
+#pragma once
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -107,6 +106,7 @@ class STServo
 		void		SetRunningTime(const uint16_t time);
 		void		SetRunningSpeed(const uint16_t speed);
 		void		SetAcceleration(const uint8_t acceleration);
+		void		SetMaxAngle(const uint16_t angle);
 
 		bool		GetTorqueEnable();
 		uint16_t	GetTargetPosition();
@@ -137,4 +137,3 @@ class STServo
 		uint8_t		fId = 0xFF;
 };
 
-#endif

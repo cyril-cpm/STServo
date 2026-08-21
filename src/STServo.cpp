@@ -14,7 +14,12 @@ STServoHandler::STServoHandler(int rxPin, int txPin, int baudrate, uart_port_t u
 		.parity = UART_PARITY_DISABLE,
 		.stop_bits = UART_STOP_BITS_1,
 		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.rx_flow_ctrl_thresh = 0,
 		.source_clk = UART_SCLK_DEFAULT,
+		.flags = {
+			.allow_pd = 0,
+			.backup_before_sleep = 0,
+		},
 	};
 
 	ESP_ERROR_CHECK(uart_driver_install(fUartPort, 1024 * 2, 1024 * 2, 0, NULL, 0));
@@ -163,7 +168,7 @@ STServo::STServo(uint8_t id) : fId(id)
 
 void STServo::SetTorqueEnable(const bool enabled)
 {
-	STS.Write(fId, REG_TORQUE_SWITCH, (const uint8_t)enabled);
+	STS.Write(fId, REG_TORQUE_SWITCH, (uint8_t)enabled);
 }
 
 void STServo::SetTargetPosition(const uint16_t position)
@@ -184,6 +189,11 @@ void STServo::SetRunningSpeed(const uint16_t speed)
 void STServo::SetAcceleration(const uint8_t acceleration)
 {
 	STS.Write(fId, REG_ACCELERATION, acceleration);
+}
+
+void STServo::SetMaxAngle(const uint16_t angle)
+{
+	STS.Write(fId, REG_MAX_ANGLE_LIMIT, angle);
 }
 
 bool STServo::GetTorqueEnable()

@@ -1,3 +1,7 @@
-cmake_minimum_required(VERSION 3.16.0)
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(esp)
+idf_component_register(SRC_DIRS "src"
+					INCLUDE_DIRS "include"
+					PRIV_REQUIRES esp_driver_uart
+				)
+
+target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++23)
+
