@@ -163,6 +163,46 @@ void STServoHandler::Update()
 
 }
 
+void STServoHandler::SyncWrite(
+		std::initializer_list<std::reference_wrapper<STServo>> list,
+		uint8_t address,
+		const uint8_t* data,
+		size_t len
+	)
+{
+	if (!data || !len)
+		return;
+	size_t length = (len + 1) * list.size() + 4;
+	size_t packetSize = 8 + list.size() * (len + 1);
+	uint8_t packet[packetSize];
+
+	packet[0] = 0xFF;
+	packet[1] = 0xFF;
+	packet[2] = 0xFE;
+	packet[3] = length;
+	packet[4] = 0x83;
+	packet[5] = address;
+	packet[6] = len;
+	
+	uint8_t index = 7;
+	for (const auto& servo : list)
+	{
+		packet[index] = servo.get().id();
+		index++;
+
+		memcpy(&packet[index], data, len);
+		index += len;
+
+	}
+
+	packet[packetSize - 1] = _CalculateChecksum(packet, packetSize - 1);
+
+	ESP_LOG_BUFFER_HEX("SYNC_SWRITE", packet, packetSize);
+
+	uart_write_bytes(fUartPort, (const char*)packet, packetSize);
+}
+
+
 STServo::STServo(uint8_t id) : fId(id)
 {}
 
@@ -173,7 +213,12 @@ void STServo::SetTorqueEnable(const bool enabled)
 
 void STServo::SetTargetPosition(const uint16_t position)
 {
-	STS.Write(fId, REG_TARGET_LOCATION, position);
+	uint16_t value = position;
+	if (position & (1 << 15))
+		value = ~position + (1<<15);
+	STS.Write(fId, REG_TARGET_LOCATION, value);
+	
+	// STS.Write(fId, REG_TARGET_LOCATION, value);
 }
 
 void STServo::SetRunningTime(const uint16_t time)
@@ -183,7 +228,10 @@ void STServo::SetRunningTime(const uint16_t time)
 
 void STServo::SetRunningSpeed(const uint16_t speed)
 {
-	STS.Write(fId, REG_RUNNING_SPEED, speed);
+	uint16_t value = speed;
+	if (speed & (1 << 15))
+		value = ~speed + (1<<15);
+	STS.Write(fId, REG_RUNNING_SPEED, value);
 }
 
 void STServo::SetAcceleration(const uint8_t acceleration)
@@ -194,6 +242,11 @@ void STServo::SetAcceleration(const uint8_t acceleration)
 void STServo::SetMaxAngle(const uint16_t angle)
 {
 	STS.Write(fId, REG_MAX_ANGLE_LIMIT, angle);
+}
+
+void STServo::SetMinAngle(const uint16_t angle)
+{
+	STS.Write(fId, REG_MIN_ANGLE_LIMIT, angle);
 }
 
 bool STServo::GetTorqueEnable()

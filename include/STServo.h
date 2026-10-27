@@ -5,6 +5,8 @@
 #include "driver/uart.h"
 #include "hal/uart_types.h"
 #include <cstdint>
+#include <initializer_list>
+#include <functional>
 
 /**
  * STS3215 Control Table Defines
@@ -63,6 +65,8 @@
 #define REG_MOBILE_SIGN           0x42 // 1 Byte
 #define REG_PRESENT_CURRENT       0x45 // 2 Bytes
 
+class STServo;
+
 class  STServoHandler
 {
 	public:
@@ -78,7 +82,57 @@ class  STServoHandler
 		void	Read(uint8_t id, uint8_t address, uint8_t* value);
 		void	Read(uint8_t id, uint8_t address, uint16_t* value);
 
+		void	WriteReg(uint8_t id, uint8_t address, const uint8_t value) {
+			WriteReg(id, address, &value, 1);
+		}
+
+		void	WriteReg(uint8_t id, uint8_t address, const uint16_t value) {
+			const uint8_t data[2] = {
+				(uint8_t)(value & 0xFF),
+				(uint8_t)((value >> 8) & 0xFF)
+			};
+
+			WriteReg(id, address, data, 2);
+		}
+
 		void	WriteReg(uint8_t id, uint8_t address, const uint8_t* data, size_t length);
+
+		void	SyncWrite(
+				std::initializer_list<std::reference_wrapper<STServo>> list,
+				uint8_t address,
+				const uint8_t* data,
+				size_t len
+			);
+
+		void	SyncWrite(
+				std::initializer_list<std::reference_wrapper<STServo>> list,
+				uint8_t address,
+				uint8_t value
+			) {
+			SyncWrite(list, address, &value, 1);
+		}
+
+		void	SyncWrite(
+				std::initializer_list<std::reference_wrapper<STServo>> list,
+				uint8_t address,
+				uint16_t value
+			) {
+			SyncWrite(list, address, (uint8_t*)&value, 2);
+		}
+
+		void	SendAction(uint8_t id) {
+
+			uint8_t packet[6];
+
+			packet[0] = 0xFF;
+			packet[1] = 0xFF;
+			packet[2] = id;
+			packet[3] = 2;
+			packet[4] = 0x05;
+			packet[5] = _CalculateChecksum(packet, 4);
+
+			uart_write_bytes(fUartPort, (const char*)packet, 6);
+		}
 
 		void		Update();
 
@@ -101,18 +155,61 @@ class STServo
 
 		STServo(uint8_t id);
 
+		void		SendAction() {
+			STS.SendAction(fId);
+		}
+
 		void		SetTorqueEnable(const bool enabled);
 		void		SetTargetPosition(const uint16_t position);
 		void		SetRunningTime(const uint16_t time);
 		void		SetRunningSpeed(const uint16_t speed);
 		void		SetAcceleration(const uint8_t acceleration);
 		void		SetMaxAngle(const uint16_t angle);
+		void		SetMinAngle(const uint16_t angle);
+		void		SetOperationMode(const uint8_t mode) {
+			STS.Write(fId, REG_OPERATION_MODE, mode);
+		}
+
+		void		SetCWArea(const uint8_t area) {
+			STS.Write(fId, REG_CW_INSENSITIVE_AREA, area);
+		}
+
+		void		SetCCWArea(const uint8_t area) {
+			STS.Write(fId, REG_CCW_INSENSITIVE_AREA, area);
+		}
+
+		void		SetID(const uint8_t id) {
+			STS.Write(fId, REG_ID, id);
+		}
 
 		bool		GetTorqueEnable();
 		uint16_t	GetTargetPosition();
 		uint16_t	GetRunningTime();
 		uint16_t	GetRunningSpeed();
 		uint8_t		GetAcceleration();
+		uint8_t		GetOperationMode() {
+			uint8_t value;
+			STS.Read(fId, REG_OPERATION_MODE, &value);
+			return value;
+		}
+
+		uint8_t		GetClockWiseInsensitiveRegion(){
+			uint8_t value;
+			STS.Read(fId, REG_CW_INSENSITIVE_AREA, &value);
+			return value;
+		}
+
+		uint8_t GetCounterClockWiseInsensitiveRegion() {
+			uint8_t value;
+			STS.Read(fId, REG_CCW_INSENSITIVE_AREA, &value);
+			return value;
+		}
+
+		uint8_t GetID() {
+			uint8_t value;
+			STS.Read(fId, REG_ID, &value);
+			return value;
+		}
 
 		uint16_t	GetPresentPosition();
 		uint16_t	GetPresentSpeed();
@@ -122,13 +219,33 @@ class STServo
 
 		void		WriteID(const uint8_t id);
 		void		WriteBaudrate(const uint8_t baudrate);
-		void		WriteMinAngleLimit(const uint16_t limit);
-		void		WriteMaxAngleLimit(const uint16_t limit);
 
 		uint8_t		ReadID();
 		uint8_t		ReadBaudrate();
-		uint16_t	ReadMinAngleLimit();
-		uint16_t	ReadMaxAngleLimit();
+		uint16_t	ReadMinAngleLimit() {
+			uint16_t value;
+
+			STS.Read(fId, REG_MIN_ANGLE_LIMIT, &value);
+			return value;
+		}
+
+		uint16_t	ReadMaxAngleLimit() {
+			uint16_t value;
+
+			STS.Read(fId, REG_MAX_ANGLE_LIMIT, &value);
+			return value;
+		}
+
+		void		LockEPROM() {
+			STS.Write(fId, REG_WRITE_LOCK, (uint8_t)1);
+		}
+
+		void		UnlockEPROM() {
+			STS.Write(fId, REG_WRITE_LOCK, (uint8_t)0);
+		}
+
+		uint8_t		id() const { return fId; }
+
 
 	private:
 
